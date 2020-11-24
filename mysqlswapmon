@@ -1,0 +1,73 @@
+# This Linux bash script that was designed for a hosting server that had problem with MySQL using high swap and sites stopped working as a result.
+# restarting MySQL helped to solved this. So this script checks if hosted site is loading OK (if MySQL works) and if not, it restart MySQL and report some performance related details to admin via e-mail.
+# Script also deletes certain user files in servers /tmp directory (reduce issues caused by injected bad scripts on less protected hosting server)
+
+scriptname=mysqlswapmon
+maill=admin@mail
+# site located on same server to check to discover whether server is ok (shows no error during mysql swap high usage)
+site=domain.name
+# define phrasse that is found on above mentioned site in case site is loading properly
+phrasse=Blog
+
+#### EXIT IF THIS SCRIPT IS ALREADY RUNNING #####
+#if [ "$(ps ax | grep $scriptname|wc -l)" -gt "4" ];then
+## echo "There is a process that has swap in its name, so this script is maybe already running, lets quit"
+#echo "mysqlswapmon in root at $(hostname) was already running, so quitting, do not want to run it multiple times"|mail -s "mysqlswapmon already running" admin@mail
+#exit
+#fi
+
+#### ERASE USERS FILES IN /TMP ####
+logf="/tmp/unknownfilesmysqlswapmon"
+touch $logf
+for file in $(find /tmp /var/tmp -type f -perm -644|grep -vE "sess|.tmp|lastcpanel|suspended|cache|local_|spamassassin|nixstats|woocommerce|cloudflare.|wordpress-|google-maps|ru_RU|X1-");do
+echo "$file" >> $logf
+if [[ "$(cat $logf|grep $file|wc -l)" == "1" ]];then
+# This particular file name was not yet reported
+newfile=1
+fi
+done
+if [[ "$newfile" == "1" ]];then
+echo "This is /root/mysqlswapmon at $(hostname) and it found new unknown file/s in /tmp. Want to delete it? Latest file: $file . Recently found files:
+$(tail $logf)"|mail -s "$(hostname): New unknown file/s in /tmp" $maill
+if [[ "$(stat $file)" != *"root"* ]];then
+echo "Latest unknown file $file does not contain root when doing stat.. should i delete it? $(stat $file)"|mail -s "$(hostname): New unknown file/s in /tmp" $maill
+fi
+fi
+var="$(cat $logf)" && echo "$var"|sort -u > $logf
+
+#### GET TOP SWAP EATING PROCESS #####
+topswappingprocess=$(ps -e -o vsz,rss,comm | { read x; echo "$x"; sort -k2n | tail -n 2; })
+
+#### IF MYSQL IS ONE OF THE TOP PROCESSES USING SWAP #####
+if [[ "$topswappingprocess" == *"mysql"* ]];then
+
+#### CHECK IF MY SITE IS RUNNING, IF YES, EXIT ####
+if [ "$(lynx $site --dump -connect_timeout=20 -accept_all_cookies | grep "$phrasse" | head -n1 | wc -l)" == "1" ];then
+# site is opening, lets assume everything is working even MySQL is using some SWAP
+exit
+fi
+
+#### NOT EXITTED SO THE SITE IS NOT RUNNING and SWAP is HIGH, RESTART MYSQL ####
+freembefore=$(free -mt)
+timeout 600 service mysql restart
+service nscd restart
+freemafter=$(free -mt)
+iops=$(fio --bs=4k --size=1m --direct=1 --runtime=5 --rw=randread --numjobs=3 --group_reporting --name=1m 2>/dev/null|grep iops|awk '{print $6}'|sed -e "s|iops=||g";rm -f 1m.*)
+
+echo "Script /root/$scriptname was running and it found that the mysql is the top swap eater process:
+$topswappingprocess
+
+At same time at http://$site was not found phrasse \"$phrasse\" which may/may not indicate problem
+
+MySQL was restarted.
+Current IOPs $iops
+
+free -mt before
+$freembefore
+
+free -mt after
+$freemafter
+" | mail -s "$(hostname) - MySQL was the top swap eater process" $maill
+
+fi
+#
