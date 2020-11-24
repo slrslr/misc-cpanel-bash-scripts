@@ -1,0 +1,76 @@
+echo ""
+echo "######## ABOUT ################################################"
+echo "# Linux bash script to run one MySQL query on multiple databases whose name match user defined string/phrasse."
+echo "# -------------------------------------------------------------"
+echo "# This script will not execute query without asking confirmation."
+echo "# Backing up your mysql databases is always good idea, even this script has backup function."
+echo "###############################################################"
+
+###### VARIABLES ##################################
+
+# file which contains mysql query/ies that will be executed (one per line)
+queries=queries-to-execute
+
+# file which contains strings/phrasses (one per line). If database name match that string/phrasse, then query will be executed on it
+mydbnames=database-list
+
+# directory for MySQL backups. We can choose to backup DB before queries are executed. NO trailing slash / at the end.
+mysqlbackups=/tmp/mysqlbackups
+
+thisscriptdir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+####################################################
+
+if [[ "$(cat $thisscriptdir/$queries $thisscriptdir/$mydbnames|wc -l)" == "0" ]];then
+echo -e "\nERROR: Please update files $queries and $mydbnames with your data.\nAll queries and or database names should be one per line. $mydbnames can contain partial database names.\n" && touch $queries $mydbnames && exit
+fi
+
+echo -e "\nFile $thisscriptdir/$queries contains following MySQL queries that will be executed:"
+cat $thisscriptdir/$queries
+
+echo -e "\nFile $dbnames contains following phrasses/database names which will be matched to local databases:"
+cat $thisscriptdir/$mydbnames
+
+echo -e "\nAre abovementioned data alright?\nWe are not executing any query yet, we will try to just list all databases that match phrasses from $dbnames file.\nCancel this script by Ctrl plus C or enter your MySQL username:\n"
+read user
+
+mysql -u $user -p -e "show databases;" > /tmp/tmp_alldbs
+alldbs="$(cat /tmp/tmp_alldbs)"
+
+matchingdbnames=""
+for string in $(cat $thisscriptdir/$mydbnames);do
+matchingdbnames="$matchingdbnames\n$(echo -e \"$alldbs\"|grep $string)"
+done
+
+echo -e "\nThese are databases that match phrasses from your $thisscriptdir/$mydbnames file:"
+echo "$matchingdbnames
+
+echo -e "\n!!!! Do you want to backup abovementioned databases now and execute your MySQL query/ies on them now? !!!!\nb = backup and execute , e = execute only , or do Ctrl plus C to quit"
+read action
+
+echo -e "\nWhat is the $user MySQL password?"
+read pwd
+
+if [[ "$action" == "b" ]];then
+echo -e "Doing backups now"
+for db in $(echo "$matchingdbnames");do
+mkdir -p $mysqlbackups 2>/dev/null
+mysqldump -u $user -p $db > $mysqlbackups/$db.sql
+echo -e "\nBackup should have been created: $(ls -lh $mysqlbackups/$db*)"
+done
+ls -lh $mysqlbackups
+echo "\nWas backups created? If not, do Ctrl plus C and fix this script. Else if OK, hit any key"
+read backupsok
+fi
+
+for query in $(echo "$thisscriptdir/$queries");do
+for db in $(echo "$matchingdbnames");do
+echo $query
+echo "\nHit any key to execute above mentioned query on $db"
+read confirm
+mysql -u $user -p$pwd $db -e "$query"
+echo -e "\nQuery should have been executed on $db, veriffy your website works as expected. If issue, restore backup by command: mysql -u $user -p $db < $mysqlbackups/$db.sql"
+done
+done
+echo -e "\nIt is all, script finished. Be aware of backups stored in $mysqlbackups directory"
+#
