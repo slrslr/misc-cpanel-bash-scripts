@@ -1,0 +1,9 @@
+#!/bin/bash
+# Change permissions of the files tha match defined name. In this case wp-config.php in /home to the 600 so it canot be read by other users/world.
+# Email will be sent to $emaill after its complete. This script should be run in /"screen/" it takes long time. Can be interupted at anytime if u want by ctrl+c"
+
+emaill=email@here
+
+for acct in $(ls -A1 /var/cpanel/users/ | grep -v system); do
+for file in $(/bin/nice -n 19 /usr/bin/ionice -c2 -n7 find /home/$acct/public_html -type f -name wp-config.php -not -perm 600 -o -name config.php -not -perm -600 2>/dev/null);do chmod 600 "$file";done
+done
