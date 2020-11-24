@@ -1,0 +1,3 @@
+/bin/nice -n 19 /usr/bin/ionice -c2 -n7 mysqlcheck -u root -pPASSWORDHERE --all-databases --check --auto-repair -F -C
+mysql -u root -pPASSWORDHERE -e "FLUSH QUERY CACHE"
+# newline
