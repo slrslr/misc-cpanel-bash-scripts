@@ -1,0 +1,7 @@
+if [[ "$(pgrep -lf tmpmonitor|wc -l)" -gt "1" ]];then
+exit
+fi
+while true;do
+timeout 7 /bin/nice -n 19 /usr/bin/ionice -c2 -n7 find /tmp /var/tmp /dev/shm -type f \( -iname "*.pl" -o -iname "*.perl" -o -iname "*.sh" -o -iname "*.py" -o -iname "*.pyc" -o -iname "*.pyo" \) -delete
+sleep 1
+done
