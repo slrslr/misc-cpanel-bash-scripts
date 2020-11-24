@@ -1,0 +1,7 @@
+echo "Enter cPanel account name for which to reset current month data transfer / zero it:"
+read cpanel
+
+for i in $(ls /var/cpanel/bandwidth/ | grep $cpanel);do mv $i /tmp/;done
+echo "Running cpanel log service for that account, can take many seconds:"
+/scripts/runweblogs $cpanel
+echo "COMPLETE. cpanel $cpanel data transfer should have been zeroed, can veriffy in cpanel"
