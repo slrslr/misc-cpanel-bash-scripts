@@ -1,0 +1,12 @@
+echo "This scans for symlinks in the /home dir, symlinks can be security issue. Google: WHM Race symlink protection"
+
+rm -rf symlinks_in_home
+
+for i in $(ls -A1 /var/cpanel/users/ | grep -v system | grep -v vpnlcbsl); do
+
+find /home/$i/public_html -type l >> symlinks_in_home
+echo $i
+done
+
+echo "DONE. Found symlinks are in file: $(pwd)/symlinks_in_home . Now listing that file:"
+cat $(pwd)/symlinks_in_home
