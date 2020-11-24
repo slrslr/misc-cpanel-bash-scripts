@@ -1,0 +1,29 @@
+#!/bin/bash
+#set -exu
+echo -e "##### Script to grep ALL cpanel users access logs (/home/*/access-logs/) for lines matching/excluding defined phrases #####\n\n"
+
+echo "1/4 - Enter pattern that have to be found in that files. Todays date: $(date). Example pattern: 27/Aug/2016:07"
+read mustcontain
+
+includeonlyloglinescontaining=".php"
+echo "2/4 - Further display only lines containing following phrasses: (example: .php|php5|POST) hit enter to use \".php\" only"
+read includeonlyloglinescontaininginput
+if [ "$includeonlyloglinescontaininginput" != "" ];then
+includeonlyloglinescontaining="$includeonlyloglinescontaininginput"
+fi
+
+excludeloglinescontaining="viewtopic|viewforum|memberlist|wp-comments|prev|html|404 |403 |wp-login.php|wp-cron.php|.gif|.jpg|.png|.css"
+echo "3/4 - Further hide lines containing following phrasses: (example: $excludeloglinescontaining) hit enter to use example phrasses"
+read excludeloglinescontaininginput
+if [ "$excludeloglinescontaininginput" != "" ];then
+excludeloglinescontaining="$excludeloglinescontaininginput"
+fi
+
+echo -e "4/4 - We are prepared to find all cpanel users access logs containing $mustcontain and then filter out these files contents to show lines containing $mustcontain and \"$includeonlyloglinescontaining\" and exclude lines containing: $excludeloglinescontaining\nHit any key to continue"
+read continue
+
+for user in $(ls -A1 /var/cpanel/users/ | grep -v system); do
+#echo -e "============ USER $user ============\n"
+find /home/$user/access-logs/ -type f -exec grep "$mustcontain" {} \;|grep "$mustcontain"|grep -E "$includeonlyloglinescontaining"|grep -vE "$excludeloglinescontaining"
+#for file in $(grep -Ril "$mustcontain" $logdir);do echo -e "\n$file" && cat $file|grep "$mustcontain"|grep -E "$includeonlyloglinescontaining"|grep -vE "$excludeloglinescontaining";done
+done

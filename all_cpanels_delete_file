@@ -1,0 +1,10 @@
+echo "Script for doing an command on all cpanel account files. delete error logs"
+
+for i in $(ls -A1 /var/cpanel/users/ | grep -v system); do
+rm -r /home/$i/public_html/readme.html
+rm -r /home/$i/public_html/*/readme.html
+rm -r /home/$i/public_html/*/*/readme.html
+rm -r /home/$i/public_html/license.txt
+rm -r /home/$i/public_html/*/license.txt
+rm -r /home/$i/public_html/*/*/license.txt
+done
