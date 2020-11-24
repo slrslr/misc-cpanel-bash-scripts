@@ -1,0 +1,55 @@
+# setup cronjob like:
+# */10 * * * * /bin/sh /root/scamcheck/scamcheck
+# setup new file "webpagestoextract" in same directory as this script and paste inside the list of URLs that contains updated list of fake sites..,
+# for example file can contain following URL, note that the line should contain IPHERE at the place where it accepts parameter for the hosting server IP, so do NOT replace the IPHERE by actual IP:
+# http://db.aa419.org/fakebankslist.php?psearch=IPHERE
+
+webpagestoextract=webpagestoextract
+suspiciousdomains=suspiciousdomains
+suspiciousdomainshosted=suspiciousdomainshosted
+hosteddomains=$(cat /etc/httpd/conf/httpd.conf | grep "ServerName" | tr -d " " | sed -e "s/ServerName//g")
+thisscriptdir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+adminmail=admin@mail
+thisservip=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1'|head -n 1)
+
+# Empty suspiciousdomainshosted file if its not younger 4 months (is older), so if abuser start hosting same domain, im alerted again (number is in hours)
+find $thisscriptdir -name "suspiciousdomainshosted" ! -ctime -2880 -delete
+
+#for webpage in $(cat $thisscriptdir/webpagestoextract);do
+while read webpage;do
+webpage=$(echo $webpage|sed -e "s|IPHERE|$thisservip|g")
+
+#echo "-------------------------------------------------------------------------------------------"
+#echo "Download webpage $webpage content"
+#echo "Check if any of listed domains (suspicious domains) on that page are hosted on this server"
+#echo "-------------------------------------------------------------------------------------------"
+
+curl --silent "$webpage" --user-agent "ICPH server daily checking anti-abuse bot. Thank You support@instantcpanelhosting.com"| grep -ahoP 'http[-a-zA-Z0-9@:%_\+.~#?&//=]{2,256}\.[a-z]{2,4}\b(\/[-a-zA-Z0-9@:%_\+.~#?&//=]*)?' | grep -v "419" | grep -v "w3." | awk -F/ '{print $3}' | sed -e "s/http:\/\/www.//g" | sed -e "s/www.//g" | sed -e "s/http:\/\///g" | sort -u > $suspiciousdomains
+# > /dev/null 2>&1
+
+#echo "Extracted suspicious domains:"
+#cat $suspiciousdomains
+#echo ""
+
+for suspiciousdomain in $(cat $suspiciousdomains);do
+#echo "is suspicious domain $suspiciousdomain hosted?"
+if [[ "$hosteddomains" == *"$suspiciousdomain"* ]];then
+#echo "it is hosted. we already have it in suspiciousdomainshosted file (already been reported)?"
+if [[ "$(cat $thisscriptdir/$suspiciousdomainshosted)" != *"$suspiciousdomain"* ]];then
+#echo "This suspicious domain was not on file so its new! lets add it to the file and send an email alert"
+echo "$suspiciousdomain" >> $thisscriptdir/$suspiciousdomainshosted
+
+#echo "Suspicious domains hosted:"
+#cat $thisscriptdir/$suspiciousdomainshosted
+#echo ""
+echo "New suspicious domain hosted on $(hostname). Source: $webpage
+
+$suspiciousdomain
+
+Check this domain and suspend it from WHMCS if needed. This is an email from "scamcheck" script." | mail -s "New suspicious domain at $(hostname)" $adminmail
+fi
+fi
+done
+
+done < $thisscriptdir/webpagestoextract
+#echo "Done, if no output, it means no new suspicious domain that is hosted at this server."
