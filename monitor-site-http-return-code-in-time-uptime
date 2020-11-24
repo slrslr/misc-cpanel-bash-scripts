@@ -1,0 +1,14 @@
+#!/bin/bash
+# Script to record non-200 HTTP return codes in time on a defined URL
+# siteuptime log file may become large if there is page is long term unavailable
+
+while true;do
+
+url="https://domain.tld/page"
+result=$(curl --silent --location --head "$url"|grep "HTTP/")
+
+if [[ "$result" != *"200"* ]];then
+echo "$(date) $result" >> siteuptimelog
+fi
+sleep 5
+done
