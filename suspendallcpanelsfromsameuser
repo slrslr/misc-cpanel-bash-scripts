@@ -1,0 +1,13 @@
+echo "This script will list all cpanels that are registered to same e-mail as the cpanel you define below. It will then allow suspension of all these accounts if confirmed."
+echo -e "\nPlease enter cpanel username (example the username of bad user who violated TOS):"
+read cpi
+cpimail=$(grep "CONTACTEMAIL=" /var/cpanel/users/$cpi|sed -e "s|CONTACTEMAIL=||g")
+echo "Script found this e-mail address (\"$cpimail\") and use it to find other cpanels with this e-mail, any key to confirm or Ctrl+C to cancel:"
+read kdhfhggjud
+echo "These are cpanels that have that e-mail inside their configs:"
+grep -Ril "$cpimail" /var/cpanel/users
+echo "Suspend all these cPanels? (y= yes, or other key to stop this script):"
+read input
+if [[ "$input" == "y" ]];then
+for userpath in $(grep -Ril "$cpimail" /var/cpanel/users);do /scripts/suspendacct $(echo "$userpath"|tail -c 9);done
+fi
