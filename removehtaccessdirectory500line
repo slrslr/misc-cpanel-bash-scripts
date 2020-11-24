@@ -1,0 +1,20 @@
+# Search for .htaccess files with <Directory phrasse and replace it/comment it out. <Directory can cause error 500 on some servers,
+# so use this only if your server returns this error caused by this htaccess directive.
+
+#set -exu
+
+adminmail=admin@mail
+
+if [[ "$(ps aux|grep \"htaccess\"|wc -l)" != "1" ]];then
+# echo -e "It seems that removehtaccessdirectory500line script is currently already searching for htaccesses, so i do not run another session.\n$(ps auxf|grep find)\n$(ps aux|grep htaccess)"|mail -s "removehtaccessdirectory500line is already running, exitting" $adminmail
+exit
+fi
+
+# Update only .htaccess files modified/created in last $min minutes:
+min=11
+
+for user in $(ls -A1 /var/cpanel/users|egrep -v "system|\.");do
+
+for htaccess in $(/bin/nice -n 19 /usr/bin/ionice -c2 -n7 find /home/$user/public_html -type f -name ".htaccess" -mmin -$min -exec grep -il "<Directory" {} \;);do sed -i "s|<directory |#<START this may cause error 500 END Directory|I" $htaccess && sed -i "s|</Directory>|#<START this may cause error 500 END /Directory>|I" $htaccess;done
+
+done
