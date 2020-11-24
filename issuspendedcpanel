@@ -1,0 +1,16 @@
+#!/bin/bash
+#set -u
+
+if [[ "$1" == "" ]];then
+
+echo "Is this cpanel uspended? enter cpanel username:"
+read -r cpanel
+if [ ! -f /var/cpanel/users/"$cpanel" ];then echo "/var/cpanel/users/\"$cpanel\" does not exist" && exit;fi
+if [[ "$(cat /var/cpanel/users/"$cpanel"|grep -Ev \"TIME\|MAIL\"|grep SUSPENDED=1)" == "" ]];then echo "Not suspended";else echo "Suspended";fi
+
+else
+
+if [ ! -f /var/cpanel/users/"$1" ];then echo "/var/cpanel/users/\"$1\" does not exist" && exit;fi
+if [[ "$(cat /var/cpanel/users/"$1"|grep -Ev \"TIME\|MAIL\"|grep SUSPENDED=1)" == "" ]];then echo "Not suspended";else echo "Suspended";fi
+
+fi
