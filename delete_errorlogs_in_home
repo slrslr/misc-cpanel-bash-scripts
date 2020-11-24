@@ -1,0 +1,10 @@
+# echo "Script for doing an command on all cpanel account files. delete error logs"
+
+for i in $(ls -A1 /var/cpanel/users/ | grep -v system); do
+rm -f "/home/$i/public_html/error_log"
+rm -f "/home/$i/public_html/*/error_log"
+rm -f "/home/$i/public_html/*/*/error_log"
+rm -f "/home/$i/public_html/killed_log.txt"
+rm -f "/home/$i/public_html/*/killed_log.txt"
+rm -f "/home/$i/public_html/*/*/killed_log.txt"
+done
