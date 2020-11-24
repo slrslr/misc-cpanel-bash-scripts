@@ -1,0 +1,25 @@
+#!/bin/sh                                                                                                                                   
+
+# echo "Script started running (it means that sleep of around 70 hours was there and it initiated then this script. Nice.. WARNING: this script should run around 1 hour to optimize mysqls, then i should receive second email upon completion, if not received, script was killed maybe.." mail -s "/root/mysqloptimize.. from $(hostname)" admin@mail
+
+mysql -NBe "SHOW DATABASES;" | grep -v 'lost+found' \
+    | while read database ; do
+
+    #skip system-db                                       
+    if [ "$database" = "mysql" ] ; then
+        continue
+    fi
+    mysql -NBe "SHOW TABLE STATUS;" $database | while read name engine version rowformat rows avgrowlength datalength maxdatalength indexlength datafree autoincrement createtime updatetime checktime collation checksum createoptions comment ; do
+
+        #skip views                                
+        if [ "$datafree" = "NULL" ] ; then
+            continue
+        fi
+        if [ "$datafree" -gt 0 ] ; then
+            echo "$database.$name is fragmented"
+            mysql -NBe "OPTIMIZE TABLE $name;" "$database"
+        fi
+    done
+done
+
+# echo "Script ended running.." | mail -s "/root/mysqloptimize.. from $(hostname)" admin@mail
