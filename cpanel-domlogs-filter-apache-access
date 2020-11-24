@@ -1,0 +1,15 @@
+# Basic bash script to help filter cPanel Apache access logs to discover details about visitors
+
+echo "
+user domlogs:
+ls /usr/local/apache/domlogs/ | grep USERHERE
+
+only certain date time log entries:
+for i in \$(ls | grep user);do tail -n 300 $i|grep 04/Mar/2015:13:4;done
+
+most visiting IPs:
+cat /usr/local/apache/domlogs/user/DOMAINHERE|awk '{print $1}' | sort -nk1 | uniq -c | sort -nk1
+
+details about the IP:
+cat /usr/local/apache/domlogs/user/DOMAINHERE|egrep -v \".png|.jpg|.gif|.css\"|grep IPHERE
+"
